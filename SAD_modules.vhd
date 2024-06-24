@@ -37,75 +37,65 @@ generic (
         data_out : out std_logic_vector(15 downto 0)           
     );
 end SAD_Calc;
-
 architecture RTL of SAD_Calc is
-	signal SAD: std_logic_vector((SAD_dw - 1) downto 0) := (others => '0'); -- Initialize SAD to 0
-	constant zeros : std_logic_vector((SAD_dw - data_width - 1) downto 0) := (others => '0');
-	signal i : integer; 
+    signal SAD: std_logic_vector((SAD_dw - 1) downto 0) := (others => '0'); 
+    constant zeros : std_logic_vector((SAD_dw - data_width - 1) downto 0) := (others => '0');
+    signal i : integer := 0;        
+    signal start_reg: std_logic := '0';  
+    signal done_reg: std_logic := '0';     
 
-
-	begin
-  sad_calc: process(clk, rst)
+    begin
+    sad_calc: process(clk, rst)
     variable sub, A_i, B_i: std_logic_vector((SAD_dw - 1) downto 0);
-  begin
-    if rst = '1' then
-      i <= 0;
-      SAD <= (others => '0');        -- Reset SAD inside the process
-      done <= '0';
-      W_e <= '0';
-      R_e <= '0';
-      Z_i <= '0';
-    elsif clk = '1' and clk'event then
-      Z_i <= '0';  -- Clear Z_i unless the condition is met
+    begin
+        if rst = '1' then
+            i <= 0;
+            SAD <= (others => '0');   
+            done_reg <= '0';
+            W_e <= '0';
+            R_e <= '0';
+            Z_i <= '0';
+            start_reg <= '0';
+        elsif clk = '1' and clk'event then
+            -- Cap nhat thanh ghi start
+            start_reg <= start;
 
-      if start = '1' then
-        W_e <= '0';
-        R_e <= '1';
+            if start_reg = '1' then 
+                R_e <= '1';
+                W_e <= '0';
 
-        -- Check the condition here to avoid the latching issue
-        if i + 1 = Mat_size then
-          Z_i <= '1';
-          done <= '1';
-        end if;
+                if i + 1 = Mat_size then
+                    Z_i <= '1'; -- Gan Z_i trong chu ky tiep theo sau khi dieu kien duoc thoa man
+                    done_reg <= '1';
+                else
+                    Z_i <= '0'; 
+                end if;
 
-        A_i := zeros & data_A_in;
-        B_i := zeros & data_B_in;
+                A_i := zeros & data_A_in;
+                B_i := zeros & data_B_in;
 
-        if ld_i = '1' then
-          sub := std_logic_vector(unsigned(A_i) - unsigned(B_i));
-          if sub(8) = '1' then
-            sub := std_logic_vector(-(signed(sub)));
-          end if;
-          SAD <= std_logic_vector(unsigned(SAD) + unsigned(sub));
-        end if;
+                if ld_i = '1' then
+                    sub := std_logic_vector(unsigned(A_i) - unsigned(B_i));
+                    if sub(8) = '1' then
+                        sub := std_logic_vector(-(signed(sub)));
+                    end if;
+                    SAD <= std_logic_vector(unsigned(SAD) + unsigned(sub));
+                end if;
 
-        if i_enable = '1' then
-          i <= i + 1;
-        end if;
+                if i_enable = '1' then
+                    i <= i + 1;
+                end if;
+            else
+                W_e <= '0';
+                R_e <= '0';
+            end if; 
 
-      else
-        W_e <= '0';
-        R_e <= '0';
-      end if;  -- End of start = '1'
+        end if; 
+    end process;
 
-    end if;  -- End of clk'event
-  end process;
-
-  data_out <= SAD; -- Assign data_out outside the process
+    data_out <= SAD; 
+    done <= done_reg; -- Gan done tu thanh ghi 
 
 end RTL;
-
-				
-			
-	
-		
-	
-	
-	
-
-
-
-
-
 
 
