@@ -1,0 +1,119 @@
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+entity FSM_Controller is
+    Port (
+        clk      : in  STD_LOGIC;
+        rst      : in  STD_LOGIC;
+        start    : in  STD_LOGIC;
+        subzero  : out STD_LOGIC;
+        done     : out STD_LOGIC;
+        R_e      : out STD_LOGIC;
+        ld_i     : out STD_LOGIC;
+        i_enable : inout STD_Logic; -- Changed to inout
+        z_sel    : in STD_LOGIC;
+        Z_i      : in STD_LOGIC -- Added input
+    );
+end FSM_Controller;
+
+
+--Rest of the code is the same as the original code with the corrections mentioned above.
+
+
+architecture Behavioral of FSM_Controller is
+    type state_type is (STATE_0, STATE_1, STATE_2, STATE_3, STATE_4, STATE_5, STATE_6, STATE_7, STATE_8, STATE_9, STATE_10);
+    signal current_state, next_state : state_type;
+    signal Z_i: STD_LOGIC;  -- Added declaration for Z
+    signal internal_En_enable: STD_LOGIC;  -- Internal signal for En_enable
+begin
+    process (clk, rst)
+    begin
+        if rst = '1' then
+            current_state <= STATE_0;
+        elsif rising_edge(clk) then
+            current_state <= next_state;
+        end if;
+    end process;
+
+    process (current_state, start)
+    begin
+        case current_state is
+            when STATE_0 =>
+                done <= '0';
+                Ld_i <= '1';
+                internal_En_enable <= '0';
+                -- Clear all registers here
+                if start = '1' then
+                    next_state <= STATE_1;
+                else
+                    next_state <= STATE_0;
+                end if;
+
+            when STATE_1 =>
+                if start = '1' then
+                    next_state <= STATE_2;
+                else
+                    next_state <= STATE_1;
+                end if;
+
+            when STATE_2 =>
+                if Z_i = '0' then
+                    next_state <= STATE_3;
+                else
+                    next_state <= STATE_8 ;
+                end if;
+
+            when STATE_3 =>
+                R_e <= '1';
+                next_state <= STATE_4;
+
+            when STATE_4 =>
+                if z_sel = '1' then
+                      -- Select B - A
+                    next_state <= STATE_5;
+                else
+                      -- Select A - B
+                    next_state <= STATE_6;
+                end if;
+
+            when STATE_5 =>
+                subzero <= '1';
+                next_state <= STATE_7;
+
+	    when STATE_6 => 
+		subzero <= '0';
+		next_state <= STATE_7;
+
+            when STATE_7=>
+                if i_enable = '1' then
+                    next_state <= STATE_2;
+                else
+                    next_state <= STATE_8;
+                end if;
+
+            when STATE_8 =>
+                ld_i <= '0';
+                next_state <= STATE_9;
+
+            when STATE_9 =>
+                done <= '1';
+		next_state <= STATE_10;
+            when STATE_10 =>
+                if start = '0' then
+                    next_state <= STATE_1;
+                else
+                    next_state <= STATE_10;
+                end if;
+
+            when others =>
+                next_state <= STATE_0;
+        end case;
+    end process;
+
+    -- Assign internal signal to output
+    En_enable <= i_enable;
+
+
+end Behavioral;
